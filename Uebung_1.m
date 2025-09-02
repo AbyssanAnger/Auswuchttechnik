@@ -1,53 +1,16 @@
-%load("Null_Lauf.mat");
+load("awt_UE1_Aufgabe.mat");
 %% Daten aufnehmen
 Null_Lauf=awt_messen("COM5", 5);
 %% Daten aufnehmen
-Eins_Lauf=awt_messen("COM5", 5); % Testgewicht angebracht.
+Ein_Lauf=awt_messen("COM5", 5); % Testgewicht angebracht, position in Winkel und Masse dokumentiert
 
-%% Zeitwerte kalkulieren
-function [t, f_s] = calculate_time(data)
-    % data: Matrix aus Null_Lauf.mat (mit 4. Spalte = Zeit in µs)
+%% Daten Laden
 
-    time = data(:,4);            % Zeitspalte
-    t_end = sum(time) * 1e-6;    % in s (Achtung: 10e-6 ist 1e-5, nicht 1e-6!)
-    delta_t = mean(time) * 1e-6; % Abtastschritt in s
-    f_s = 1/delta_t;             % Samplingfrequenz in Hz
+null_lauf = load("Null_Lauf.mat", "data");
+null_lauf = null_lauf.data;
 
-    t = linspace(0, t_end, length(time));
-end
-
-[t_a_0, f_s] = calculate_time(Null_Lauf);
-%% Plotting raw data
-
-figure(1)
-tiledlayout(3,1)
-
-nexttile
-fig1 = figure(1);
-
-plot(t_a_0, Null_Lauf(:,1));
-title("Beschleunigung 1")
-
-nexttile
-plot(t, Null_Lauf(:,2));
-title("Beschleunigung 2")
-
-nexttile
-plot(t, Null_Lauf(:,3));
-title("Triggerfunktion")
-
-%% Zuschnitt Triggerfunktion und Beschleunigungen
-function [accel_1_cut, accel_2_cut, trigger_cut, t_cut] = cut_signals(accel_1, accel_2, trigger, t)
-    diff_trigg = diff(trigger);
-    first_index = find(diff_trigg == 1, 1, "first") + 1;
-    last_index = find(diff_trigg == 1, 1, "last");
-
-    trigger_cut = trigger(first_index:last_index);
-    accel_1_cut = accel_1(first_index:last_index);
-    accel_2_cut = accel_2(first_index:last_index);
-    t_cut = t(1:length(trigger_cut));
-end
-
+ein_lauf = load("Testlauf_Eins.mat", "data");
+ein_lauf = ein_lauf.data_test_1;
 
 %% Plot der zugeschnittenen Signale
 tiledlayout(3, 1)
@@ -129,3 +92,61 @@ u_test;
 % u_wuchtsetzung = - (-0,1128+1i*0,036/b_hat);
 
 
+%% Daten Laden
+tmp = load("Null_Lauf.mat", "data");
+null_lauf = tmp.data;
+
+tmp = load("Testlauf_Eins.mat", "data_test_1");
+ein_lauf = tmp.data_test_1;
+
+%% Zeitwerte kalkulieren
+[t_0, f_s_0] = calculate_time(null_lauf);
+[t_1, f_s_1] = calculate_time(ein_lauf);
+
+%% Zuschnitt
+[accel_1_cut, accel_2_cut, trigger_cut, t_cut] = ...
+    cut_signals(null_lauf(:,1), null_lauf(:,2), null_lauf(:,3), t_0);
+
+%% Plotting raw data
+plot_raw_data(null_lauf, t_0);
+plot_raw_data(ein_lauf, t_1);
+
+%% ====== FUNKTIONEN ======
+function [t, f_s] = calculate_time(data)
+    time = data(:,4);                 % Zeitspalte (µs)
+    delta_t = mean(time) * 1e-6;      % Abtastschritt [s]
+    f_s = 1/delta_t;                  % Samplingfrequenz [Hz]
+    t_end = length(time) * delta_t;   % Gesamtdauer [s]
+    t = linspace(0, t_end, length(time));
+end
+
+function [accel_1_cut, accel_2_cut, trigger_cut, t_cut] = cut_signals(accel_1, accel_2, trigger, t)
+    diff_trigg = diff(trigger);
+    first_index = find(diff_trigg > 0.5, 1, "first") + 1;
+    last_index  = find(diff_trigg > 0.5, 1, "last");
+
+    trigger_cut = trigger(first_index:last_index);
+    accel_1_cut = accel_1(first_index:last_index);
+    accel_2_cut = accel_2(first_index:last_index);
+    t_cut = t(1:length(trigger_cut));
+end
+
+function plot_raw_data(Lauf, t)
+    figure;
+    tiledlayout(3,1);
+
+    nexttile;
+    plot(t, Lauf(:,1));
+    title("Beschleunigung 1");
+
+    nexttile;
+    plot(t, Lauf(:,2));
+    title("Beschleunigung 2");
+
+    nexttile;
+    plot(t, Lauf(:,3));
+    title("Triggerfunktion");
+end
+
+function Testsetzung(gewicht, winkel)
+    betrag = gewicht*cos(winkel)
