@@ -1,51 +1,12 @@
 load("awt_UE1_Aufgabe.mat");
 %% Daten aufnehmen
 Null_Lauf=awt_messen("COM5", 5);
+
 %% Daten aufnehmen
 Ein_Lauf=awt_messen("COM5", 5); % Testgewicht angebracht, position in Winkel und Masse dokumentiert
 
-%% Daten Laden
-
-null_lauf = load("Null_Lauf.mat", "data");
-null_lauf = null_lauf.data;
-
-ein_lauf = load("Testlauf_Eins.mat", "data");
-ein_lauf = ein_lauf.data_test_1;
-
-%% Plot der zugeschnittenen Signale
-tiledlayout(3, 1)
-
-fig2 = figure(2);
-
-nexttile
-plot(t_cut, accel_1_cut);
-title("geschnittene Beschleunigung 1")
-
-nexttile
-plot(t_cut, accel_2_cut);
-title("geschnittene Beschleunigung 2")
-
-nexttile
-plot(t_cut, trigger_cut);
-title("geschnittenes Triggersignal")
-
-%% FFT der Signale
-function [freq_index, amp, angle_deg] = signal_fft(signal, f_s)
-    L = length(signal);
-    fft_signal = 2*fft(signal)/L;
-
-    % Max. Amplitude (ignoriere DC-Anteil)
-    amp = max(abs(fft_signal(2:end/2)));
-
-    % Index des Maximums
-    freq_index = find(abs(fft_signal) == amp, 1);
-
-    % Phasenwinkel in Grad
-    angle_deg = angle(fft_signal(freq_index)) * 180/pi;
-end
-
 %% 3D Plot der Fourier Signale
-plot()
+% plot()
 
 %% Abfrage nach positivem Massenausgleich
 % answer = questdlg('Möchten Sie einen positiven Massenausgleich?', ...
@@ -78,16 +39,6 @@ legend show
 %% instationäre Drehzahlen
 stft(trigger_cut, f_s, Window=kaiser(256,5),OverlapLength=220,FFTLength=512)
 
-%% U_test in komplexe Zahl umrechnen
-gewicht = 3,6; % in gramm
-winkel = 90; % in Grad
-
-betrag = gewicht*cosd(winkel);
-komplexer_winkel = gewicht*sind(winkel);
-
-u_test = betrag + 1i*komplexer_winkel;
-u_test;
-
 % b_hat = (accel_1_frequency - (-0,1128+1i*0,036))/u_test;
 % u_wuchtsetzung = - (-0,1128+1i*0,036/b_hat);
 
@@ -104,12 +55,45 @@ ein_lauf = tmp.data_test_1;
 [t_1, f_s_1] = calculate_time(ein_lauf);
 
 %% Zuschnitt
-[accel_1_cut, accel_2_cut, trigger_cut, t_cut] = ...
-    cut_signals(null_lauf(:,1), null_lauf(:,2), null_lauf(:,3), t_0);
+[accel_1_cut_0, accel_2_cut_0, trigger_cut_0, t_cut_0] = ...
+    cut_signals(null_lauf(:,1), null_lauf(:,2), null_lauf(:,3), t_0); % Null-Lauf geschnitten
+
+[accel_1_cut_1, accel_2_cut_1, trigger_cut_1, t_cut_1] = ...
+    cut_signals(null_lauf(:,1), null_lauf(:,2), null_lauf(:,3), t_0); % Ein-Lauf geschnitten
 
 %% Plotting raw data
-plot_raw_data(null_lauf, t_0);
-plot_raw_data(ein_lauf, t_1);
+plot_raw_data(null_lauf, t_0, "(0-Lauf)");
+plot_raw_data(ein_lauf, t_1,  "(1-Lauf)");
+
+%% Plotting cut data
+plot_cut_data(accel_1_cut_0, accel_2_cut_0, trigger_cut_0, t_cut_0, "(0-Lauf) geschnitten");
+
+plot_cut_data(accel_1_cut_1, accel_2_cut_1, trigger_cut_1, t_cut_1, "(1-Lauf) geschnitten");
+
+%% FFT
+% FFT für alle Signale erstellen
+% Amplitude von Triggerfunktion aus dem Frequenzbereich bestimmen
+% Index der Amplitude der Triggerfunktion finden
+% Den Index auf die Beschleunigungen im Frequenzbereich anwenden und dort
+% die Werte auslesen
+[trigger_0_fft, trigger_cut_0_index, trigger_cut_0_amp, trigger_cut_0_angle] = signal_fft(trigger_cut_0);
+[accel_1_0_fft] = signal_fft(accel_1_cut_0);
+
+%% FFT plotting
+L = length(trigger_0_fft(1:end/2));
+f = f_s_0/L*(1:L);
+fft_signal = abs(trigger_0_fft(1:end/2));
+figure(9);
+plot(f, fft_signal);
+title("Trigger");
+
+fft_signal_accel = abs(accel_1_0_fft(1:end/2));
+figure(10);
+plot(f, fft_signal_accel);
+% plot_fft(trigger_0_fft, f_s_0);
+
+%% Umrechnung in komplexe Werte
+complex_0 = testsetzung(3.6, 90);
 
 %% ====== FUNKTIONEN ======
 function [t, f_s] = calculate_time(data)
@@ -123,7 +107,7 @@ end
 function [accel_1_cut, accel_2_cut, trigger_cut, t_cut] = cut_signals(accel_1, accel_2, trigger, t)
     diff_trigg = diff(trigger);
     first_index = find(diff_trigg > 0.5, 1, "first") + 1;
-    last_index  = find(diff_trigg > 0.5, 1, "last");
+    last_index  = find(diff_trigg == 1, 1, "last");
 
     trigger_cut = trigger(first_index:last_index);
     accel_1_cut = accel_1(first_index:last_index);
@@ -131,9 +115,9 @@ function [accel_1_cut, accel_2_cut, trigger_cut, t_cut] = cut_signals(accel_1, a
     t_cut = t(1:length(trigger_cut));
 end
 
-function plot_raw_data(Lauf, t)
+function plot_raw_data(Lauf, t, overtitle)
     figure;
-    tiledlayout(3,1);
+    tlc = tiledlayout(3,1);
 
     nexttile;
     plot(t, Lauf(:,1));
@@ -146,7 +130,52 @@ function plot_raw_data(Lauf, t)
     nexttile;
     plot(t, Lauf(:,3));
     title("Triggerfunktion");
+
+    title(tlc, overtitle);
 end
 
-function Testsetzung(gewicht, winkel)
-    betrag = gewicht*cos(winkel)
+function plot_cut_data(accel_1, accel_2, trigger, t, overtitle)
+    figure;
+    tlc = tiledlayout(3,1);
+
+    nexttile;
+    plot(t, accel_1);
+    title("Beschleunigung 1");
+
+    nexttile;
+    plot(t, accel_2);
+    title("Beschleunigung 2");
+
+    nexttile;
+    plot(t, trigger);
+    title("Triggerfunktion");
+
+    title(tlc, overtitle)
+end
+
+
+function [fft_signal, freq_index, amp, angle_deg] = signal_fft(signal)
+    L = length(signal);
+    fft_signal = 2*fft(signal)/L;
+
+    % Max. Amplitude (ignoriere DC-Anteil)
+    amp = max(abs(fft_signal(2:end/2)));
+
+    % Index des Maximums
+    freq_index = find(abs(fft_signal) == amp, 1);
+
+    % Phasenwinkel in Grad
+    angle_deg = angle(fft_signal(freq_index)) * 180/pi;
+end
+
+% function cut_by_index(trigger_freq_index, accel)
+%     accel()
+% 
+% end
+
+function [complex] = testsetzung(gewicht, winkel)
+    real = gewicht*cosd(winkel);
+    imaginary = gewicht*sind(winkel);
+    complex = real + 1i*imaginary;
+end
+
