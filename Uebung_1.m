@@ -5,9 +5,6 @@ Null_Lauf=awt_messen("COM5", 5);
 %% Daten aufnehmen
 Ein_Lauf=awt_messen("COM5", 5); % Testgewicht angebracht, position in Winkel und Masse dokumentiert
 
-%% 3D Plot der Fourier Signale
-% plot()
-
 %% Abfrage nach positivem Massenausgleich
 % answer = questdlg('Möchten Sie einen positiven Massenausgleich?', ...
 % 	'Dessert Menu', ...
@@ -25,16 +22,7 @@ Ein_Lauf=awt_messen("COM5", 5); % Testgewicht angebracht, position in Winkel und
 %         dessert = 0;
 % end
 
-%% Plot Polarcoordinates
-% Option für Einstellen von Winkeln an denen tatsächlich ein Setzungsgewicht anbringbar ist, z.B. bei vorgegebenen Löchern.
-% Option für Wiedergabe von negativem Massenausgleich => 180 Grad versetzt
 
-fig_8 = figure(8);
-polarplot([0 accel_1_angle/180*pi], [0 accel_1_amplitude], "black-o", "DisplayName", "Beschleunigungssensor 1");
-hold on
-polarplot([0 accel_2_angle/180*pi], [0 accel_2_amplitude], "magenta-o", "DisplayName", "Beschleunigungssensor 2");
-hold off
-legend show
 
 %% instationäre Drehzahlen
 stft(trigger_cut, f_s, Window=kaiser(256,5),OverlapLength=220,FFTLength=512)
@@ -91,6 +79,14 @@ fft_signal_accel = abs(accel_1_0_fft(1:end/2));
 figure(10);
 plot(f, fft_signal_accel);
 % plot_fft(trigger_0_fft, f_s_0);
+
+[accel_1_amp, accel_1_angle] = find_amp_and_angle_by_index(trigger_cut_0_index, accel_1_0_fft);
+
+
+%% 3D Plot der Fourier Signale
+plot_fft(trigger_0_fft, f_s_0, "Triggerfunktion")
+%% Polar coordinate plot
+
 
 %% Umrechnung in komplexe Werte
 complex_0 = testsetzung(3.6, 90);
@@ -168,10 +164,19 @@ function [fft_signal, freq_index, amp, angle_deg] = signal_fft(signal)
     angle_deg = angle(fft_signal(freq_index)) * 180/pi;
 end
 
-% function cut_by_index(trigger_freq_index, accel)
-%     accel()
-% 
-% end
+function plot_fft(fft_signal, f_s,  fft_signal_name)
+    L = length(fft_signal(1:end/2));
+    f = f_s/L*(1:L);
+    signal = abs(trigger_0_fft(1:end/2));
+    figure(9);
+    plot(f, signal);
+    title(fft_signal_name)
+end
+
+function [accel_amp, accel_angle] = find_amp_and_angle_by_index(trigger_freq_index, accel)
+    accel_amp = abs(accel(trigger_freq_index));
+    accel_angle = angle(accel(trigger_freq_index));
+end
 
 function [complex] = testsetzung(gewicht, winkel)
     real = gewicht*cosd(winkel);
@@ -179,3 +184,14 @@ function [complex] = testsetzung(gewicht, winkel)
     complex = real + 1i*imaginary;
 end
 
+function plot_polarcoordinates()
+% Option für Einstellen von Winkeln an denen tatsächlich ein Setzungsgewicht anbringbar ist, z.B. bei vorgegebenen Löchern.
+% Option für Wiedergabe von negativem Massenausgleich => 180 Grad versetzt
+
+    fig_8 = figure(8);
+    polarplot([0 accel_1_angle/180*pi], [0 accel_1_amplitude], "black-o", "DisplayName", "Beschleunigungssensor 1");
+    hold on
+    polarplot([0 accel_2_angle/180*pi], [0 accel_2_amplitude], "magenta-o", "DisplayName", "Beschleunigungssensor 2");
+    hold off
+    legend show
+end
