@@ -33,7 +33,8 @@ stft(trigger_cut, f_s, Window=kaiser(256,5),OverlapLength=220,FFTLength=512)
 
 %% Daten Laden
 tmp = load("Null_Lauf.mat", "data");
-null_lauf = tmp.data;
+% null_lauf = tmp.data;
+null_lauf = awt_UE1;
 
 tmp = load("Testlauf_Eins.mat", "data_test_1");
 ein_lauf = tmp.data_test_1;
@@ -68,23 +69,17 @@ plot_cut_data(accel_1_cut_1, accel_2_cut_1, trigger_cut_1, t_cut_1, "(1-Lauf) ge
 [accel_1_0_fft] = signal_fft(accel_1_cut_0);
 
 %% FFT plotting
-L = length(trigger_0_fft(1:end/2));
-f = f_s_0/L*(1:L);
-fft_signal = abs(trigger_0_fft(1:end/2));
-figure(9);
-plot(f, fft_signal);
-title("Trigger");
-
-fft_signal_accel = abs(accel_1_0_fft(1:end/2));
-figure(10);
-plot(f, fft_signal_accel);
-% plot_fft(trigger_0_fft, f_s_0);
-
-[accel_1_amp, accel_1_angle] = find_amp_and_angle_by_index(trigger_cut_0_index, accel_1_0_fft);
+[accel_1_fft_plot] = plot_fft(accel_1_0_fft, f_s_0, "Beschleunigung 1 (0-Lauf)");
+[accel_2_fft_plot] = plot_fft(accel_2_0_fft, f_s_0, "Beschleunigung 2 (0-Lauf)");
+[trigger_fft_plot] = plot_fft(trigger_0_fft, f_s_0, "Triggerfunktion (0-Lauf)");
 
 
 %% 3D Plot der Fourier Signale
-plot_fft(trigger_0_fft, f_s_0, "Triggerfunktion")
+tiled(trigger_fft_plot, trigger_fft_plot, trigger_fft_plot);
+
+%% Amplitude und Winkel berechnen
+[accel_1_amp, accel_1_angle] = find_amp_and_angle_by_index(trigger_cut_0_index, accel_1_0_fft);
+
 %% Polar coordinate plot
 
 
@@ -164,13 +159,34 @@ function [fft_signal, freq_index, amp, angle_deg] = signal_fft(signal)
     angle_deg = angle(fft_signal(freq_index)) * 180/pi;
 end
 
-function plot_fft(fft_signal, f_s,  fft_signal_name)
+function [fig] = plot_fft(fft_signal, f_s,  fft_signal_name)
+    fig = figure;
     L = length(fft_signal(1:end/2));
     f = f_s/L*(1:L);
-    signal = abs(trigger_0_fft(1:end/2));
+    signal = abs(fft_signal(1:end/2));
     figure(9);
     plot(f, signal);
     title(fft_signal_name)
+end
+
+function tiled(fig1, fig2, fig3, titel)
+    figure;
+    tlc = tiledlayout(3,1);
+
+    nexttile;
+    fig1;
+    title("Beschleunigung 1");
+
+    nexttile;
+    fig2;
+    title("Beschleunigung 2");
+
+    nexttile;
+    fig3;
+    title("Triggerfunktion");
+
+    title(tlc, titel)
+
 end
 
 function [accel_amp, accel_angle] = find_amp_and_angle_by_index(trigger_freq_index, accel)
