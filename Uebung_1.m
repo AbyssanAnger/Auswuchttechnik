@@ -17,20 +17,14 @@ load("awt_UE1_Aufgabe.mat");
 %         dessert = 0;
 % end
 
-
-
-%% instationäre Drehzahlen
-stft(trigger_cut, f_s, Window=kaiser(256,5),OverlapLength=220,FFTLength=512)
-
-% b_hat = (accel_1_frequency - (-0,1128+1i*0,036))/u_test;
-% u_wuchtsetzung = - (-0,1128+1i*0,036/b_hat);
-
 %% Daten aufnehmen
-null_lauf = awt_messen("COM5", 5);
+% null_lauf = awt_messen("COM5", 5);
 
 %% Daten Laden
-% tmp = load("null_lauf.mat", "data");
-% null_lauf = tmp.data;
+tmp = load("Null_Lauf.mat", "null_lauf");
+null_lauf = tmp.null_lauf;
+% tmp = load("Urunwucht_UE2.mat", "data");
+% null_lauf = tmp.data();
 
 %% Zeitwerte kalkulieren
 [t_0, f_s_0] = calculate_time(null_lauf);
@@ -60,10 +54,6 @@ plot_cut_data(accel_1_cut_0, accel_2_cut_0, trigger_cut_0, t_cut_0, "(0-Lauf) ge
 [accel_2_0_fft_plot] = plot_fft(accel_2_0_fft, f_s_0, "Beschleunigung 2 (0-Lauf)");
 [trigger_0_fft_plot] = plot_fft(trigger_0_fft, f_s_0, "Triggerfunktion (0-Lauf)");
 
-%% Komplexe Zahl bilden
-
-accel_1_0 = accel_1_0_amp + 1i*accel_1_0_angle;
-accel_2_0 = accel_2_0_amp + 1i*accel_1_0_angle;
 %% 3D Plot der Fourier Signale
 % tiled(trigger_fft_plot, accel_1_0_fft_plot, accel_2_0_fft_plot, "0-Lauf");
 %% Komplexe Zahlen bilden
@@ -80,7 +70,11 @@ testsetzung_winkel = 0;
 u_test = testsetzung(testsetzung_gewicht, testsetzung_winkel);
 
 %% Testsetzung Daten aufnehmen
-ein_lauf=awt_messen("COM5", 5); % Testgewicht angebracht, position in Winkel und Masse dokumentiert
+% ein_lauf=awt_messen("COM5", 5); % Testgewicht angebracht, position in Winkel und Masse dokumentiert
+
+%% Daten laden
+tmp_2 = load("awt_UE1_Aufgabe.mat", "awt_UE1");
+ein_lauf = tmp_2.awt_UE1;
 
 %% Zeitwerte kalkulieren
 [t_1, f_s_1] = calculate_time(ein_lauf);
